@@ -1,0 +1,23 @@
+{
+    "name": "teppokoivula/admin-restrict-branch-select",
+    "type": "pw-module",
+    "description": "ProcessWire module for adding branch select support for Admin Restrict Branch.",
+    "keywords": [
+        "module",
+        "processwire"
+    ],
+    "homepage": "https://github.com/teppokoivula/AdminRestrictBranchSelect",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Teppo Koivula",
+            "homepage": "https://github.com/teppokoivula",
+            "email": "teppo.koivula@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.1",
+        "processwire/processwire": ">=3.0.123",
+        "wireframe-framework/processwire-composer-installer": "^1.0.0"
+    }
+}
