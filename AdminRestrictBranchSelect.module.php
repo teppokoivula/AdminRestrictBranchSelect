@@ -25,7 +25,7 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 			'title' => 'Admin Restrict Branch Select',
 			'summary' => 'Adds support for switching between multiple branches when using Admin Restrict Branch.',
 			'author' => 'Teppo Koivula',
-			'version' => '0.1.0',
+			'version' => '0.2.0',
 			'autoload' => 2,
 			'singular' => true,
 			'icon' => 'key',
@@ -53,20 +53,46 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 	 */
 	protected function ___setBranchRootParentId(HookEvent $event) {
 
-		// get user and bail out early if they don't have more than one branch selected
-		$user = $event->user;
-		if (!$user->branch_parent || $user->branch_parent->count() < 2) {
+		// bail out early if AdminRestrictBranch is not configured to use user or role branch_parent field
+		if ($event->object->matchType !== 'specified_parent' && $event->object->matchType !== 'specified_parent_role') {
+			return;
+		}
+
+		// get branch parents
+		$branch_parents = $this->getBranchParents($event);
+
+		// bail out early if there are no branch parents available
+		if ($branch_parents->count() === 0) {
+			return;
+		}
+
+		// if only one branch parent is available, return its ID
+		if ($branch_parents->count() === 1) {
+			$event->return = $branch_parents->first()->id;
+			$event->replace = true;
 			return;
 		}
 
 		// change active branch parent if an ID was provided via GET param or found from session data
-		$branch_parent_id = $event->input->get('branch_parent', 'int') ?: ($event->session->get('BranchParentID') ?: $user->branch_parent->first()->id);
-		$branch_parent = $event->pages->get($branch_parent_id);
-		if (!$branch_parent->id || !$user->branch_parent->has($branch_parent)) {
-			$branch_parent_id = null;
+		$branch_parent_id = $event->input->get('branch_parent', 'int') ?: ($event->session->get('BranchParentID') ?: null);
+		if ($branch_parent_id !== null) {
+			$branch_parent_page = $event->pages->get($branch_parent_id);
+			if (!$branch_parent_page->id || !$branch_parents->has($branch_parent_page)) {
+				$branch_parent_id = null;
+			}
 		}
 
-		// bail out early if user has no branch praents defined
+		// if we don't have a branch parent at this point, find first usable value from branch parents
+		if ($branch_parent_id === null) {
+			foreach ($branch_parents as $branch_parent) {
+				$branch_parent_id = $event->pages->get($branch_parent->id)->id ?? null;
+				if ($branch_parent_id !== null) {
+					break;
+				}
+			}
+		}
+
+		// bail out early if a branch parent couldn't be selected
 		if ($branch_parent_id === null) {
 			return;
 		}
@@ -91,8 +117,8 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 		}
 
 		// get user and bail out early if they don't have more than one branch selected
-		$user = $event->user;
-		if (!$user->branch_parent || $user->branch_parent->count() < 2) {
+		$branch_parents = $this->getBranchParents($event);
+		if ($branch_parents->count() < 2) {
 			return;
 		}
 
@@ -114,7 +140,7 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 			. '<label>'
 			. '<span style="' . $label_text_style . '">' . $this->_('Active branch') . '</span> '
 			. '<select name="branch_parent" onchange="this.form.submit()">';
-		foreach ($user->branch_parent as $branch_parent) {
+		foreach ($branch_parents as $branch_parent) {
 			$selected = $branch_parent->id == $event->session->get('BranchParentID') ? ' selected="selected"' : '';
 			$out .= '<option value="' . $branch_parent->id . '"' . $selected . '>' . $branch_parent->title . '</option>';
 		}
@@ -122,6 +148,26 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 			. '</label>'
 			. '</form>';
 		$event->return = $out . $event->return;
+	}
+
+	/**
+	 * Get branch parents
+	 *
+	 * @param HookEvent $event
+	 * @return PageArray
+	 */
+	protected function getBranchParents(HookEvent $event): PageArray {
+		$user = $event->user;
+		$branch_parents = $event->object->matchType === 'specified_parent' ? $user->branch_parent : $this->wire(new PageArray);
+		$admin_restrict_branch = $event->object->className === 'AdminRestrictBranch' ? $event->object : $event->modules->get('AdminRestrictBranch');
+		if ($admin_restrict_branch->matchType === 'specified_parent_role') {
+			foreach ($user->roles as $role) {
+				if ($role->branch_parent && $role->branch_parent->count()) {
+					$branch_parents->add($role->branch_parent);
+				}
+			}
+		}
+		return $branch_parents;
 	}
 
 	/**
@@ -138,6 +184,15 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 		if (!$this->modules->isInstalled('AdminRestrictBranch')) {
 			throw new WireException(
 				$this->_('Please install AdminRestrictBranch before this module')
+			);
+		}
+
+		// make sure that AdminRestrictBranch version is recent enough
+		// note: 1.0.3 is the version in which getBranchRootParentId was made hookable
+		$arb_info = $this->modules->getModuleInfo('AdminRestrictBranch');
+		if (version_compare($arb_info['version'], '1.0.3') < 0) {
+			throw new WireException(
+				$this->_('Please update AdminRestrictBranch to 1.0.3 or later version before installing this module')
 			);
 		}
 
