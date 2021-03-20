@@ -25,7 +25,7 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 			'title' => 'Admin Restrict Branch Select',
 			'summary' => 'Adds support for switching between multiple branches when using Admin Restrict Branch.',
 			'author' => 'Teppo Koivula',
-			'version' => '0.2.0',
+			'version' => '0.2.1',
 			'autoload' => 2,
 			'singular' => true,
 			'icon' => 'key',
@@ -158,8 +158,8 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 	 */
 	protected function getBranchParents(HookEvent $event): PageArray {
 		$user = $event->user;
-		$branch_parents = $event->object->matchType === 'specified_parent' ? $user->branch_parent : $this->wire(new PageArray);
 		$admin_restrict_branch = $event->object->className === 'AdminRestrictBranch' ? $event->object : $event->modules->get('AdminRestrictBranch');
+		$branch_parents = $admin_restrict_branch->matchType === 'specified_parent' ? $user->branch_parent : $this->wire(new PageArray);
 		if ($admin_restrict_branch->matchType === 'specified_parent_role') {
 			foreach ($user->roles as $role) {
 				if ($role->branch_parent && $role->branch_parent->count()) {
