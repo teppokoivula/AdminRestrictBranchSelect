@@ -25,7 +25,7 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 			'title' => 'Admin Restrict Branch Select',
 			'summary' => 'Adds support for switching between multiple branches when using Admin Restrict Branch.',
 			'author' => 'Teppo Koivula',
-			'version' => '0.2.1',
+			'version' => '0.3.0',
 			'autoload' => 2,
 			'singular' => true,
 			'icon' => 'key',
@@ -174,6 +174,7 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 	 * When the module is installed, make necessary changes to the branch_parent field
 	 *
 	 * @throws WireException if AdminRestrictBranch is not installed
+	 * @throws WireException if AdminRestrictBranch version is too old
 	 * @throws WireException if branch_parent field is not found
 	 */
 	public function ___install() {
@@ -213,6 +214,29 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 				return;
 			}
 			$this->error($this->_('Branch parent field could not be updated to allow selecting multiple options, please update field setting manually'));
+		}
+	}
+
+	/**
+	 * When the module is uninstalled, revert certain changes for the branch_parent field
+	 */
+	public function ___uninstall() {
+
+		// if the branch parent field is not found, we don't need to do anything
+		$branch_parent = $this->fields->get('branch_parent');
+		if ($branch_parent === null) {
+			return;
+		}
+
+		// modify the branch parent field (if it currently allows multiple pages)
+		if ($branch_parent->derefAsPage === FieldtypePage::derefAsPageArray) {
+			$branch_parent->inputfield = 'InputfieldPageListSelect';
+			$branch_parent->derefAsPage = FieldtypePage::derefAsPageOrNullPage;
+			if ($branch_parent->save()) {
+				$this->message($this->_('Branch parent field reverted to allow selecting single option'));
+				return;
+			}
+			$this->error($this->_('Branch parent field could not be reverted to allow selecting single option, please update field setting manually'));
 		}
 	}
 
