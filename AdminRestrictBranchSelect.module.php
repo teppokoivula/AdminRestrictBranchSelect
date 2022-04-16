@@ -25,7 +25,7 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 			'title' => 'Admin Restrict Branch Select',
 			'summary' => 'Adds support for switching between multiple branches when using Admin Restrict Branch.',
 			'author' => 'Teppo Koivula',
-			'version' => '0.3.1',
+			'version' => '0.4.0',
 			'autoload' => 2,
 			'singular' => true,
 			'icon' => 'key',
@@ -145,12 +145,22 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 			. '<select name="branch_parent" onchange="this.form.submit()">';
 		foreach ($branch_parents as $branch_parent) {
 			$selected = $branch_parent->id == $event->session->get('BranchParentID') ? ' selected="selected"' : '';
-			$out .= '<option value="' . $branch_parent->id . '"' . $selected . '>' . $branch_parent->title . '</option>';
+			$out .= '<option value="' . $branch_parent->id . '"' . $selected . '>' . $this->getBranchParentLabel($branch_parent) . '</option>';
 		}
 		$out .= '</select>'
 			. '</label>'
 			. '</form>';
 		$event->return = $out . $event->return;
+	}
+
+	/**
+	 * Get label for branch parent page
+	 *
+	 * @param Page $branch_parent
+	 * @return string
+	 */
+	protected function ___getBranchParentLabel(Page $branch_parent) {
+		return (string) $branch_parent->title;
 	}
 
 	/**
