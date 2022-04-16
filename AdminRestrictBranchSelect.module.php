@@ -25,7 +25,7 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 			'title' => 'Admin Restrict Branch Select',
 			'summary' => 'Adds support for switching between multiple branches when using Admin Restrict Branch.',
 			'author' => 'Teppo Koivula',
-			'version' => '0.3.0',
+			'version' => '0.3.1',
 			'autoload' => 2,
 			'singular' => true,
 			'icon' => 'key',
@@ -112,7 +112,10 @@ class AdminRestrictBranchSelect extends WireData implements Module {
 	protected function ___selectBranchParent(HookEvent $event) {
 
 		// bail out early if this request is not for page tree markup
-		if (strpos($event->return, 'PageListContainer') === false) {
+		if (
+			strpos($event->return, 'PageListContainer') === false
+			|| $this->config->ajax && $this->input->get('renderInputfieldAjax') === 'ProcessPageEditChildren'
+		) {
 			return;
 		}
 
